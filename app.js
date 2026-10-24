@@ -20,14 +20,14 @@ async function update(){
   for(const q of csv(quotes)){const t=Date.parse(q.recibida_utc);if(Number.isFinite(t)&&Number(q.precio_cierre)>0&&(!prices.has(q.accion)||prices.get(q.accion).t<t))prices.set(q.accion,{price:Number(q.precio_cierre),t});}
   const positions=Object.entries(portfolio.posiciones||{});
   let equity=Number(portfolio.efectivo),complete=true;
-  for(const [ticker,p] of positions){const q=prices.get(ticker);if(!q){complete=false;continue;}equity+=Number(p.cantidad)*q.price;}
+  for(const [ticker,p] of positions){const q=prices.get(ticker);if(!q||Date.now()-q.t>30*60*1000||q.t>Date.now()+60*1000){complete=false;continue;}equity+=Number(p.cantidad)*q.price;}
   const initial=Number(portfolio.capital_inicial);
-  if($("compareV3"))$("compareV3").textContent=complete?money(equity):"Sin cotización";
+  if($("compareV3"))$("compareV3").textContent=complete?money(equity):"Sin cotización reciente";
   $("cash").textContent=money(portfolio.efectivo);$("initial").textContent=money(initial);
   $("positionsCount").textContent=String(positions.length);
   const orders=portfolio.ordenes_pendientes||[];
   $("pending").textContent=String(orders.filter(o=>o.estado==="PENDIENTE").length);
-  $("equity").textContent=complete?money(equity):"Cotización faltante";
+  $("equity").textContent=complete?money(equity):"Cotización reciente faltante";
   $("return").textContent=complete&&initial>0?"Resultado estimado: "+money(equity-initial)+" ("+number(100*(equity/initial-1))+"%)":"Resultado estimado: no disponible";
   const spySeries=csv(quotes).filter(q=>q.accion==="SPY"&&Number(q.precio_cierre)>0&&Number.isFinite(Date.parse(q.inicio_vela_utc))).map(q=>({t:Date.parse(q.inicio_vela_utc),price:Number(q.precio_cierre)})).sort((a,b)=>a.t-b.t);
   // Una vela puede haberse recibido multiples veces: usar la ultima observacion por vela.
