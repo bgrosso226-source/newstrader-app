@@ -135,6 +135,18 @@ async function update(){
     if($("v4Status"))$("v4Status").textContent="V4: "+v4Error.message;
     if($("v4Trades"))$("v4Trades").textContent="No hay operaciones V4 disponibles.";
   }
+  try{
+    const raw=await file("historial_cartera_v4.csv","research-v4");
+    const entries=csv(raw);
+    const valid=entries.filter(r=>r.estado==="COMPLETO"&&Number.isFinite(Number(r.patrimonio_usd))&&r.patrimonio_usd!=="");
+    if($("v4HistoryCount"))$("v4HistoryCount").textContent=valid.length+" / "+entries.length;
+    if($("v4HistoryEquity"))$("v4HistoryEquity").textContent=valid.length?money(Number(valid.at(-1).patrimonio_usd)):"—";
+    if($("v4HistoryStatus"))$("v4HistoryStatus").textContent=valid.length?"Último registro válido: "+date(valid.at(-1).fecha_utc)+". Historial registrado, no proyección.":"No hay valoraciones completas todavía.";
+  }catch(err){
+    if($("v4HistoryCount"))$("v4HistoryCount").textContent="0";
+    if($("v4HistoryEquity"))$("v4HistoryEquity").textContent="—";
+    if($("v4HistoryStatus"))$("v4HistoryStatus").textContent="Todavía no se publicó el primer historial V4.";
+  }
   $("updated").textContent="Consultado "+date(new Date().toISOString())+" · señales de main";
   $("login").hidden=true;$("dashboard").hidden=false;$("loginError").textContent="";
  }catch(e){$("loginError").textContent=e.message;$("updated").textContent="Error: "+e.message;if($("dashboard").hidden)$("login").hidden=false;}
