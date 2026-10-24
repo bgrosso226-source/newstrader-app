@@ -34,26 +34,26 @@ async function update(){
   const spyStart=uniqueSpy[0],spyEnd=uniqueSpy[uniqueSpy.length-1];
   const spyReturn=spyStart&&spyEnd&&spyEnd.t>spyStart.t?100*(spyEnd.price/spyStart.price-1):null;
   const botReturn=complete&&initial>0?100*(equity/initial-1):null;
-  $("botPct").textContent=botReturn===null?"—":number(botReturn)+"%";
-  $("spyPct").textContent=spyReturn===null?"—":number(spyReturn)+"%";
+  if($("botPct"))$("botPct").textContent=botReturn===null?"—":number(botReturn)+"%";
+  if($("spyPct"))$("spyPct").textContent=spyReturn===null?"—":number(spyReturn)+"%";
   const maxMagnitude=Math.max(Math.abs(botReturn||0),Math.abs(spyReturn||0),0.01);
   for(const [id,val] of [["botBar",botReturn],["spyBar",spyReturn]]){
-    const el=$(id);el.style.width=val===null?"0%":(Math.abs(val)/maxMagnitude*100).toFixed(1)+"%";
+    const el=$(id);if(!el)continue;el.style.width=val===null?"0%":(Math.abs(val)/maxMagnitude*100).toFixed(1)+"%";
     el.style.opacity=val===null?".2":"1";
     el.dataset.direction=val<0?"negative":"positive";
   }
-  $("spyDetails").textContent=spyReturn===null?"No hay suficientes cierres observados de SPY para comparar.":"SPY: "+date(new Date(spyStart.t).toISOString())+" a "+date(new Date(spyEnd.t).toISOString())+" · "+money(spyStart.price)+" → "+money(spyEnd.price)+". NewsTrader: rendimiento acumulado desde su capital inicial. Los períodos pueden no coincidir; comparación orientativa, sin dividendos ni costos de SPY.";
+  if($("spyDetails"))$("spyDetails").textContent=spyReturn===null?"No hay suficientes cierres observados de SPY para comparar.":"SPY: "+date(new Date(spyStart.t).toISOString())+" a "+date(new Date(spyEnd.t).toISOString())+" · "+money(spyStart.price)+" → "+money(spyEnd.price)+". NewsTrader: rendimiento acumulado desde su capital inicial. Los períodos pueden no coincidir; comparación orientativa, sin dividendos ni costos de SPY.";
   // Serie diaria de cierres observados, deduplicada por fecha de vela.
   const daily=new Map();
   for(const point of uniqueSpy){daily.set(new Date(point.t).toISOString().slice(0,10),point);}
   const history=[...daily.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
   const trades=portfolio.operaciones||[];
-  $("tradeCount").textContent=String(trades.length);
+  if($("tradeCount"))$("tradeCount").textContent=String(trades.length);
   const flat=positions.length===0&&trades.length===0&&orders.every(o=>o.estado!=="EJECUTADA_PAPER");
   const chart=$("historyChart");
-  chart.replaceChildren();
+  if(chart)chart.replaceChildren();
   const svgNS="http://www.w3.org/2000/svg";
-  const shape=(tag,attrs)=>{const e=document.createElementNS(svgNS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,String(v));chart.append(e);return e;};
+  const shape=(tag,attrs)=>{const e=document.createElementNS(svgNS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,String(v));if(chart)chart.append(e);return e;};
   if(history.length>=2&&flat){
     const base=history[0][1].price;
     const spyValues=history.map(([day,point])=>({day,spy:initial*point.price/base,bot:initial}));
@@ -77,12 +77,12 @@ async function update(){
     }
     let peak=spyValues[0].spy,maxDD=0;
     for(const point of spyValues){peak=Math.max(peak,point.spy);maxDD=Math.min(maxDD,100*(point.spy/peak-1));}
-    $("drawdown").textContent="0% (cartera en efectivo)";
-    $("historyDetails").textContent="Desde "+history[0][0]+" hasta "+history[history.length-1][0]+". NewsTrader: "+money(initial)+" (sin compras); SPY: "+money(spyValues.at(-1).spy)+". Caída máxima observada de SPY: "+number(maxDD)+"%.";
+    if($("drawdown"))$("drawdown").textContent="0% (cartera en efectivo)";
+    if($("historyDetails"))$("historyDetails").textContent="Desde "+history[0][0]+" hasta "+history[history.length-1][0]+". NewsTrader: "+money(initial)+" (sin compras); SPY: "+money(spyValues.at(-1).spy)+". Caída máxima observada de SPY: "+number(maxDD)+"%.";
   }else{
     const msg=shape("text",{x:170,y:105,fill:"#a9bed6","text-anchor":"middle","font-size":12});
     msg.textContent=history.length<2?"Faltan cierres de SPY":"Falta historial de cartera";
-    $("drawdown").textContent=flat?"0% (sin operaciones)":"—";
+    if($("drawdown"))$("drawdown").textContent=flat?"0% (sin operaciones)":"—";
     $("historyDetails").textContent=history.length<2?"Se necesitan cierres de SPY de al menos dos días.":"Hay operaciones o posiciones: para dibujar el rendimiento real del bot necesitamos guardar valores diarios de cartera. No se reconstruyen rendimientos ficticios.";
   }
   setRows("positions",positions,(el,[ticker,p])=>{const q=prices.get(ticker);row(el,ticker+" · "+number(p.cantidad)+" acciones",q?money(Number(p.cantidad)*q.price)+" · cierre "+date(new Date(q.t).toISOString()):"Sin cotización");},"Todavía no hay compras virtuales.");
