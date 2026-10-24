@@ -1,1 +1,21 @@
-const CACHE="newstrader-shell-v1";const ASSETS=["./index.html","./style.css","./app.js","./icon.svg","./manifest.webmanifest"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));self.addEventListener("fetch",e=>{const u=new URL(e.request.url);if(u.origin!==self.location.origin||u.pathname.includes("/api/"))return;if(e.request.method==="GET")e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});
+// NewsTrader: cache solo de respaldo; siempre priorizar contenido nuevo.
+const CACHE="newstrader-shell-v2";
+const ASSETS=["./index.html","./style.css","./app.js","./icon.svg","./manifest.webmanifest"];
+self.addEventListener("install",event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+self.addEventListener("activate",event=>{
+  event.waitUntil(Promise.all([
+    caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))),
+    self.clients.claim()
+  ]));
+});
+self.addEventListener("fetch",event=>{
+  if(event.request.method!=="GET")return;
+  const url=new URL(event.request.url);
+  if(url.origin!==self.location.origin)return;
+  event.respondWith(fetch(event.request,{cache:"no-store"}).then(response=>{
+    if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));}
+    return response;
+  }).catch(()=>caches.match(event.request)));
+});
