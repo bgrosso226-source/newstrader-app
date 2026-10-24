@@ -22,6 +22,7 @@ async function update(){
   let equity=Number(portfolio.efectivo),complete=true;
   for(const [ticker,p] of positions){const q=prices.get(ticker);if(!q){complete=false;continue;}equity+=Number(p.cantidad)*q.price;}
   const initial=Number(portfolio.capital_inicial);
+  if($("compareV3"))$("compareV3").textContent=complete?money(equity):"Sin cotización";
   $("cash").textContent=money(portfolio.efectivo);$("initial").textContent=money(initial);
   $("positionsCount").textContent=String(positions.length);
   const orders=portfolio.ordenes_pendientes||[];
@@ -34,6 +35,7 @@ async function update(){
   const spyStart=uniqueSpy[0],spyEnd=uniqueSpy[uniqueSpy.length-1];
   const spyReturn=spyStart&&spyEnd&&spyEnd.t>spyStart.t?100*(spyEnd.price/spyStart.price-1):null;
   const botReturn=complete&&initial>0?100*(equity/initial-1):null;
+  if($("compareSPY"))$("compareSPY").textContent=spyReturn===null?"—":number(spyReturn)+"%";
   if($("botPct"))$("botPct").textContent=botReturn===null?"—":number(botReturn)+"%";
   if($("spyPct"))$("spyPct").textContent=spyReturn===null?"—":number(spyReturn)+"%";
   const maxMagnitude=Math.max(Math.abs(botReturn||0),Math.abs(spyReturn||0),0.01);
@@ -90,6 +92,27 @@ async function update(){
   setRows("signals",csv(signals).slice(-8).reverse(),(el,s)=>row(el,(s.accion||"?")+" · "+date(s.detectada_utc),(s.puntuacion||"—")+"/100"),"No hay señales.");
   const relevant=(runs.workflow_runs||[]).filter(r=>r.name==="Registrar Cotizaciones V3"||r.name==="Validar Motor Compra Paper V3").slice(0,5);
   setRows("runs",relevant,(el,r)=>row(el,r.name,r.conclusion||r.status),"No hay ejecuciones.");
+  // V4 tiene cartera y operaciones separadas; un error V4 no bloquea la vista V3.
+  try{
+    const v4=JSON.parse(await file("cartera_paper_v4.json","research-v4"));
+    if(v4.version!=="V4"||v4.modo!=="SIMULACION"||v4.habilitado_para_operaciones_reales!==false)throw Error("Modo de seguridad V4 inválido");
+    let total=Number(v4.efectivo),completeV4=true;
+    for(const [ticker,p] of Object.entries(v4.posiciones||{})){
+      const q=prices.get(ticker);
+      if(!q){completeV4=false;break;}
+      total+=Number(p.cantidad)*q.price;
+    }
+    if($("compareV4"))$("compareV4").textContent=completeV4?money(total):"Falta cotización";
+    if($("v4Pct"))$("v4Pct").textContent=completeV4&&Number(v4.capital_inicial)>0?number(100*(total/Number(v4.capital_inicial)-1))+"%":"—";
+    const operations=v4.operaciones||[];
+    if($("v4Status"))$("v4Status").textContent="V4 · "+Object.keys(v4.posiciones||{}).length+" posiciones · "+(v4.ordenes_pendientes||[]).filter(o=>o.estado==="PENDIENTE").length+" órdenes pendientes · "+operations.length+" operaciones registradas. Precios observados, no ejecutables; las cotizaciones pueden ser antiguas.";
+    if($("v4Trades"))setRows("v4Trades",operations.slice(-6).reverse(),(el,o)=>row(el,(o.accion||"?")+" · "+(o.tipo||"Operación"),money(o.monto_usd??o.ingreso_usd??o.resultado_usd)+" · "+date(o.fecha_utc)),"V4 todavía no realizó operaciones virtuales.");
+  }catch(v4Error){
+    if($("compareV4"))$("compareV4").textContent="No disponible";
+    if($("v4Pct"))$("v4Pct").textContent="—";
+    if($("v4Status"))$("v4Status").textContent="V4: "+v4Error.message;
+    if($("v4Trades"))$("v4Trades").textContent="No hay operaciones V4 disponibles.";
+  }
   $("updated").textContent="Consultado "+date(new Date().toISOString())+" · señales de main";
   $("login").hidden=true;$("dashboard").hidden=false;$("loginError").textContent="";
  }catch(e){$("loginError").textContent=e.message;$("updated").textContent="Error: "+e.message;if($("dashboard").hidden)$("login").hidden=false;}
