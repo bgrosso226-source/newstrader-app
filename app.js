@@ -8,12 +8,12 @@ const date=s=>{const d=new Date(s);return isNaN(d)?"—":d.toLocaleString("es-AR
 function row(parent,left,right){const div=document.createElement("div");div.className="line";const a=document.createElement("span"),b=document.createElement("strong");a.textContent=left;b.textContent=right;div.append(a,b);parent.append(div);}
 function setRows(id,items,fn,empty){const el=$(id);el.replaceChildren();if(!items.length){el.textContent=empty;return;}items.forEach(item=>fn(el,item));}
 async function api(path){const r=await fetch("https://api.github.com/repos/"+REPO+"/"+path,{headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+accessToken,"X-GitHub-Api-Version":"2022-11-28"},cache:"no-store"});if(!r.ok)throw Error(r.status===401?"Token inválido o vencido":r.status===403?"Acceso denegado o límite de GitHub":r.status===404?"No se puede acceder al repositorio privado":"GitHub respondió "+r.status);return r.json();}
-async function file(path){const v=await api("contents/"+path+"?ref="+BRANCH);if(!v.content)throw Error("Archivo no disponible: "+path);const raw=atob(v.content.replace(/\s/g,""));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);}
+async function file(path,branch=BRANCH){const v=await api("contents/"+path+"?ref="+branch);if(!v.content)throw Error("Archivo no disponible: "+path);const raw=atob(v.content.replace(/\s/g,""));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);}
 function csv(text){const rows=[],fields=[];let value="",record=[],quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){value+='"';i++;}else quoted=!quoted;}else if(c===","&&!quoted){record.push(value);value="";}else if((c==="\n"||c==="\r")&&!quoted){if(c==="\r"&&text[i+1]==="\n")i++;record.push(value);value="";if(record.some(Boolean))rows.push(record);record=[];}else value+=c;}if(value||record.length){record.push(value);rows.push(record);}const header=rows.shift()||[];return rows.map(r=>Object.fromEntries(header.map((k,i)=>[k,r[i]||""])));}
 async function update(){
  if(busy||!accessToken)return;busy=true;$("refresh").disabled=true;
  try{
-  const [raw,quotes,signals,runs]=await Promise.all([file("cartera_paper_v3.json"),file("cotizaciones_observadas_v3.csv"),file("puntuaciones_v3.csv"),api("actions/runs?per_page=10")]);
+  const [raw,quotes,signals,runs]=await Promise.all([file("cartera_paper_v3.json"),file("cotizaciones_observadas_v3.csv"),file("puntuaciones_v3.csv","main"),api("actions/runs?per_page=20")]);
   const portfolio=JSON.parse(raw);
   if(portfolio.modo!=="SIMULACION"||portfolio.habilitado_para_operaciones_reales!==false)throw Error("La cartera no está en modo seguro de simulación");
   const prices=new Map();
@@ -33,7 +33,7 @@ async function update(){
   setRows("signals",csv(signals).slice(-8).reverse(),(el,s)=>row(el,(s.accion||"?")+" · "+date(s.detectada_utc),(s.puntuacion||"—")+"/100"),"No hay señales.");
   const relevant=(runs.workflow_runs||[]).filter(r=>r.name==="Registrar Cotizaciones V3"||r.name==="Validar Motor Compra Paper V3").slice(0,5);
   setRows("runs",relevant,(el,r)=>row(el,r.name,r.conclusion||r.status),"No hay ejecuciones.");
-  $("updated").textContent="Consultado "+date(new Date().toISOString());
+  $("updated").textContent="Consultado "+date(new Date().toISOString())+" · señales de main";
   $("login").hidden=true;$("dashboard").hidden=false;$("loginError").textContent="";
  }catch(e){$("loginError").textContent=e.message;$("updated").textContent="Error: "+e.message;if($("dashboard").hidden)$("login").hidden=false;}
  finally{busy=false;$("refresh").disabled=false;}
