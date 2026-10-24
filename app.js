@@ -147,6 +147,21 @@ async function update(){
     if($("v4HistoryEquity"))$("v4HistoryEquity").textContent="—";
     if($("v4HistoryStatus"))$("v4HistoryStatus").textContent="Todavía no se publicó el primer historial V4.";
   }
+  try{
+    const [newsText,reactionText]=await Promise.all([
+      file("auditoria_noticias_v4.csv","research-v4"),
+      file("reaccion_mercado_v4.csv","research-v4")]);
+    const news=csv(newsText),reaction=csv(reactionText);
+    const approved=news.filter(n=>n.apta_filtro_exploratorio==="True").length;
+    const complete=reaction.filter(r=>r.estado==="COMPLETO").length;
+    if($("researchNews"))$("researchNews").textContent=approved+" / "+news.length;
+    if($("researchReaction"))$("researchReaction").textContent=complete+" / "+reaction.length;
+    if($("researchStatus"))$("researchStatus").textContent="Noticias aprobadas / auditadas y reacciones con precios completos / señales. Los datos históricos no prueban rentabilidad.";
+  }catch(err){
+    if($("researchNews"))$("researchNews").textContent="—";
+    if($("researchReaction"))$("researchReaction").textContent="—";
+    if($("researchStatus"))$("researchStatus").textContent="Auditorías pendientes del próximo ciclo V4; no se infieren resultados.";
+  }
   $("updated").textContent="Consultado "+date(new Date().toISOString())+" · señales de main";
   $("login").hidden=true;$("dashboard").hidden=false;$("loginError").textContent="";
  }catch(e){$("loginError").textContent=e.message;$("updated").textContent="Error: "+e.message;if($("dashboard").hidden)$("login").hidden=false;}
