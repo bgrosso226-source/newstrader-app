@@ -1,5 +1,5 @@
 // NewsTrader: cache solo de respaldo; siempre priorizar contenido nuevo.
-const CACHE="newstrader-shell-v5";
+const CACHE="newstrader-shell-v6";
 const ASSETS=["./index.html","./style.css","./app.js","./icon.svg","./manifest.webmanifest"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
