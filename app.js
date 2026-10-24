@@ -92,6 +92,28 @@ async function update(){
   setRows("signals",csv(signals).slice(-8).reverse(),(el,s)=>row(el,(s.accion||"?")+" · "+date(s.detectada_utc),(s.puntuacion||"—")+"/100"),"No hay señales.");
   const relevant=(runs.workflow_runs||[]).filter(r=>r.name==="Registrar Cotizaciones V3"||r.name==="Validar Motor Compra Paper V3").slice(0,5);
   setRows("runs",relevant,(el,r)=>row(el,r.name,r.conclusion||r.status),"No hay ejecuciones.");
+  const sectors={
+    "Tecnología":["NVDA","AAPL","MSFT","AMD"],
+    "Finanzas":["JPM","BAC","GS"],
+    "Energía":["XOM","CVX","SLB"],
+    "Salud":["LLY","JNJ","PFE"],
+    "Consumo":["WMT","AMZN","KO","TSLA"],
+    "Industria":["CAT","BA","UPS"]
+  };
+  const observed=csv(quotes);
+  const validSymbols=new Set(observed.filter(q=>q.estado==="RECIENTE"&&Number(q.precio_cierre)>0).map(q=>q.accion));
+  const universe=Object.values(sectors).flat();
+  if($("coverageCount"))$("coverageCount").textContent=universe.filter(t=>validSymbols.has(t)).length+"/20";
+  if($("sectorCoverage"))setRows("sectorCoverage",Object.entries(sectors),(el,[name,tickers])=>{
+    const found=tickers.filter(t=>validSymbols.has(t));
+    row(el,name+" · "+found.length+"/"+tickers.length,found.length===tickers.length?"Completo":(tickers.filter(t=>!validSymbols.has(t)).join(", ")||"—")+" sin datos recientes");
+  },"No hay sectores configurados.");
+  const qqq=observed.filter(q=>q.accion==="QQQ"&&Number(q.precio_cierre)>0&&Number.isFinite(Date.parse(q.inicio_vela_utc)))
+    .map(q=>({t:Date.parse(q.inicio_vela_utc),price:Number(q.precio_cierre)})).sort((a,b)=>a.t-b.t);
+  const uq=[...new Map(qqq.map(q=>[q.t,q])).values()].sort((a,b)=>a.t-b.t);
+  const qqqReturn=uq.length>=2&&uq.at(-1).t>uq[0].t?100*(uq.at(-1).price/uq[0].price-1):null;
+  if($("qqqPct"))$("qqqPct").textContent=qqqReturn===null?"—":number(qqqReturn)+"%";
+  if($("sectorNotes"))$("sectorNotes").textContent="Cobertura: símbolos con alguna observación marcada RECIENTE en el historial (no necesariamente de hoy). QQQ: rendimiento entre primeras y últimas velas disponibles, sin dividendos ni costos. No implica señales rentables.";
   // V4 tiene cartera y operaciones separadas; un error V4 no bloquea la vista V3.
   try{
     const v4=JSON.parse(await file("cartera_paper_v4.json","research-v4"));
