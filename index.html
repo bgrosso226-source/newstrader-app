@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1322"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://api.github.com; img-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./style.css"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>NewsTrader | Simulación privada</title></head>
+<body><main>
+<header><div class="brand"><img src="./icon.svg" alt=""><div><strong>NewsTrader</strong><small>Simulación · solo lectura</small></div></div><span class="pill">PAPER</span></header>
+<section id="login" class="panel"><h1>Tu simulación privada</h1><p>Conectá tu cuenta mediante un token de GitHub <b>solo lectura</b> limitado al repositorio. El token permanece únicamente en la memoria de esta pestaña: no se guarda ni se envía a otro servidor.</p>
+<label for="token">Token de acceso personal (fine-grained)</label><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+<button id="connect">Conectar con GitHub</button><p id="loginError" class="error" role="alert"></p>
+<details><summary>Cómo crear un token seguro</summary><p>En GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens. Elegí solamente <b>bgrosso226-source/bot-trading-spy</b>, permiso <b>Contents: Read-only</b> y una fecha de vencimiento corta. No otorgues permisos de escritura. Nunca compartas el token en un chat.</p></details></section>
+<section id="dashboard" hidden>
+<div class="topline"><span id="updated">Sin actualizar</span><button id="refresh" class="secondary">Actualizar</button><button id="logout" class="secondary">Salir</button></div>
+<div class="hero panel"><span>Valor estimado de cartera</span><strong id="equity">—</strong><span id="return">Rendimiento: —</span></div>
+<div class="grid"><div class="panel metric"><span>Efectivo</span><strong id="cash">—</strong></div><div class="panel metric"><span>Posiciones abiertas</span><strong id="positionsCount">—</strong></div><div class="panel metric"><span>Órdenes pendientes</span><strong id="pending">—</strong></div><div class="panel metric"><span>Capital inicial</span><strong id="initial">—</strong></div></div>
+<section class="panel"><h2>Posiciones virtuales</h2><div id="positions" class="rows">Sin posiciones</div></section>
+<section class="panel"><h2>Órdenes virtuales</h2><div id="orders" class="rows">Sin órdenes</div></section>
+<section class="panel"><h2>Últimas señales</h2><div id="signals" class="rows">Sin señales</div></section>
+<section class="panel"><h2>Automatización</h2><div id="runs" class="rows">Sin información</div></section>
+<p class="note">Valor estimado usando el último cierre observado disponible, incluso si es antiguo. No representa un precio ejecutable. La app no compra ni vende; solo lee datos del repositorio privado.</p>
+</section><footer>NewsTrader V3 · Simulación educativa · Sin dinero real</footer>
+</main><script src="./app.js" defer></script></body></html>
