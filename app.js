@@ -43,6 +43,48 @@ async function update(){
     el.dataset.direction=val<0?"negative":"positive";
   }
   $("spyDetails").textContent=spyReturn===null?"No hay suficientes cierres observados de SPY para comparar.":"SPY: "+date(new Date(spyStart.t).toISOString())+" a "+date(new Date(spyEnd.t).toISOString())+" · "+money(spyStart.price)+" → "+money(spyEnd.price)+". NewsTrader: rendimiento acumulado desde su capital inicial. Los períodos pueden no coincidir; comparación orientativa, sin dividendos ni costos de SPY.";
+  // Serie diaria de cierres observados, deduplicada por fecha de vela.
+  const daily=new Map();
+  for(const point of uniqueSpy){daily.set(new Date(point.t).toISOString().slice(0,10),point);}
+  const history=[...daily.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+  const trades=portfolio.operaciones||[];
+  $("tradeCount").textContent=String(trades.length);
+  const flat=positions.length===0&&trades.length===0&&orders.every(o=>o.estado!=="EJECUTADA_PAPER");
+  const chart=$("historyChart");
+  chart.replaceChildren();
+  const svgNS="http://www.w3.org/2000/svg";
+  const shape=(tag,attrs)=>{const e=document.createElementNS(svgNS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,String(v));chart.append(e);return e;};
+  if(history.length>=2&&flat){
+    const base=history[0][1].price;
+    const spyValues=history.map(([day,point])=>({day,spy:initial*point.price/base,bot:initial}));
+    const vals=spyValues.flatMap(x=>[x.spy,x.bot]);
+    const lo=Math.min(...vals),hi=Math.max(...vals);
+    const pad=Math.max(2,(hi-lo)*.12),min=lo-pad,max=hi+pad;
+    const x=i=>35+i*290/(spyValues.length-1);
+    const y=v=>175-(v-min)/(max-min)*145;
+    for(let i=0;i<4;i++){
+      const value=min+(max-min)*i/3;
+      shape("line",{x1:35,y1:y(value),x2:325,y2:y(value),stroke:"#33465d","stroke-width":.8});
+      const label=shape("text",{x:29,y:y(value)+4,fill:"#9eb2cf","font-size":10,"text-anchor":"end"});
+      label.textContent=Math.round(value).toString();
+    }
+    for(const [key,color] of [["bot","#46d3bd"],["spy","#8ea9ff"]]){
+      shape("polyline",{points:spyValues.map((d,i)=>x(i)+","+y(d[key])).join(" "),fill:"none",stroke:color,"stroke-width":3,"stroke-linejoin":"round","stroke-linecap":"round"});
+    }
+    for(const [i,label] of [[0,history[0][0]],[history.length-1,history[history.length-1][0]]]){
+      const e=shape("text",{x:x(i),y:198,fill:"#9eb2cf","font-size":10,"text-anchor":i===0?"start":"end"});
+      e.textContent=label.slice(5);
+    }
+    let peak=spyValues[0].spy,maxDD=0;
+    for(const point of spyValues){peak=Math.max(peak,point.spy);maxDD=Math.min(maxDD,100*(point.spy/peak-1));}
+    $("drawdown").textContent="0% (cartera en efectivo)";
+    $("historyDetails").textContent="Desde "+history[0][0]+" hasta "+history[history.length-1][0]+". NewsTrader: "+money(initial)+" (sin compras); SPY: "+money(spyValues.at(-1).spy)+". Caída máxima observada de SPY: "+number(maxDD)+"%.";
+  }else{
+    const msg=shape("text",{x:170,y:105,fill:"#a9bed6","text-anchor":"middle","font-size":12});
+    msg.textContent=history.length<2?"Faltan cierres de SPY":"Falta historial de cartera";
+    $("drawdown").textContent=flat?"0% (sin operaciones)":"—";
+    $("historyDetails").textContent=history.length<2?"Se necesitan cierres de SPY de al menos dos días.":"Hay operaciones o posiciones: para dibujar el rendimiento real del bot necesitamos guardar valores diarios de cartera. No se reconstruyen rendimientos ficticios.";
+  }
   setRows("positions",positions,(el,[ticker,p])=>{const q=prices.get(ticker);row(el,ticker+" · "+number(p.cantidad)+" acciones",q?money(Number(p.cantidad)*q.price)+" · cierre "+date(new Date(q.t).toISOString()):"Sin cotización");},"Todavía no hay compras virtuales.");
   setRows("orders",orders.slice(-12).reverse(),(el,o)=>row(el,(o.accion||"?")+" · "+(o.accion_orden||"COMPRAR"),(o.estado||"—")+" · "+money(o.monto_usd)),"No hay órdenes registradas.");
   setRows("signals",csv(signals).slice(-8).reverse(),(el,s)=>row(el,(s.accion||"?")+" · "+date(s.detectada_utc),(s.puntuacion||"—")+"/100"),"No hay señales.");
