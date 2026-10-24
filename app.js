@@ -28,6 +28,21 @@ async function update(){
   $("pending").textContent=String(orders.filter(o=>o.estado==="PENDIENTE").length);
   $("equity").textContent=complete?money(equity):"Cotización faltante";
   $("return").textContent=complete&&initial>0?"Resultado estimado: "+money(equity-initial)+" ("+number(100*(equity/initial-1))+"%)":"Resultado estimado: no disponible";
+  const spySeries=csv(quotes).filter(q=>q.accion==="SPY"&&Number(q.precio_cierre)>0&&Number.isFinite(Date.parse(q.inicio_vela_utc))).map(q=>({t:Date.parse(q.inicio_vela_utc),price:Number(q.precio_cierre)})).sort((a,b)=>a.t-b.t);
+  // Una vela puede haberse recibido multiples veces: usar la ultima observacion por vela.
+  const uniqueSpy=[...new Map(spySeries.map(q=>[q.t,q])).values()].sort((a,b)=>a.t-b.t);
+  const spyStart=uniqueSpy[0],spyEnd=uniqueSpy[uniqueSpy.length-1];
+  const spyReturn=spyStart&&spyEnd&&spyEnd.t>spyStart.t?100*(spyEnd.price/spyStart.price-1):null;
+  const botReturn=complete&&initial>0?100*(equity/initial-1):null;
+  $("botPct").textContent=botReturn===null?"—":number(botReturn)+"%";
+  $("spyPct").textContent=spyReturn===null?"—":number(spyReturn)+"%";
+  const maxMagnitude=Math.max(Math.abs(botReturn||0),Math.abs(spyReturn||0),0.01);
+  for(const [id,val] of [["botBar",botReturn],["spyBar",spyReturn]]){
+    const el=$(id);el.style.width=val===null?"0%":(Math.abs(val)/maxMagnitude*100).toFixed(1)+"%";
+    el.style.opacity=val===null?".2":"1";
+    el.dataset.direction=val<0?"negative":"positive";
+  }
+  $("spyDetails").textContent=spyReturn===null?"No hay suficientes cierres observados de SPY para comparar.":"SPY: "+date(new Date(spyStart.t).toISOString())+" a "+date(new Date(spyEnd.t).toISOString())+" · "+money(spyStart.price)+" → "+money(spyEnd.price)+". NewsTrader: rendimiento acumulado desde su capital inicial. Los períodos pueden no coincidir; comparación orientativa, sin dividendos ni costos de SPY.";
   setRows("positions",positions,(el,[ticker,p])=>{const q=prices.get(ticker);row(el,ticker+" · "+number(p.cantidad)+" acciones",q?money(Number(p.cantidad)*q.price)+" · cierre "+date(new Date(q.t).toISOString()):"Sin cotización");},"Todavía no hay compras virtuales.");
   setRows("orders",orders.slice(-12).reverse(),(el,o)=>row(el,(o.accion||"?")+" · "+(o.accion_orden||"COMPRAR"),(o.estado||"—")+" · "+money(o.monto_usd)),"No hay órdenes registradas.");
   setRows("signals",csv(signals).slice(-8).reverse(),(el,s)=>row(el,(s.accion||"?")+" · "+date(s.detectada_utc),(s.puntuacion||"—")+"/100"),"No hay señales.");
