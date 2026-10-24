@@ -1,4 +1,5 @@
 name: Publicar NewsTrader en GitHub Pages
+# Reintento tras habilitar GitHub Pages
 on:
   push:
     branches: [main]
