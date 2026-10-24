@@ -121,13 +121,13 @@ async function update(){
     let total=Number(v4.efectivo),completeV4=true;
     for(const [ticker,p] of Object.entries(v4.posiciones||{})){
       const q=prices.get(ticker);
-      if(!q){completeV4=false;break;}
+      if(!q||Date.now()-q.t>30*60*1000||q.t>Date.now()+60*1000){completeV4=false;break;}
       total+=Number(p.cantidad)*q.price;
     }
-    if($("compareV4"))$("compareV4").textContent=completeV4?money(total):"Falta cotización";
+    if($("compareV4"))$("compareV4").textContent=completeV4?money(total):"Falta cotización reciente";
     if($("v4Pct"))$("v4Pct").textContent=completeV4&&Number(v4.capital_inicial)>0?number(100*(total/Number(v4.capital_inicial)-1))+"%":"—";
     const operations=v4.operaciones||[];
-    if($("v4Status"))$("v4Status").textContent="V4 · "+Object.keys(v4.posiciones||{}).length+" posiciones · "+(v4.ordenes_pendientes||[]).filter(o=>o.estado==="PENDIENTE").length+" órdenes pendientes · "+operations.length+" operaciones registradas. Precios observados, no ejecutables; las cotizaciones pueden ser antiguas.";
+    if($("v4Status"))$("v4Status").textContent="V4 · "+Object.keys(v4.posiciones||{}).length+" posiciones · "+(v4.ordenes_pendientes||[]).filter(o=>o.estado==="PENDIENTE").length+" órdenes pendientes · "+operations.length+" operaciones registradas. Valoraciones con cotizaciones recientes (máximo 30 minutos); precios no ejecutables.";
     if($("v4Trades"))setRows("v4Trades",operations.slice(-6).reverse(),(el,o)=>row(el,(o.accion||"?")+" · "+(o.tipo||"Operación"),money(o.monto_usd??o.ingreso_usd??o.resultado_usd)+" · "+date(o.fecha_utc)),"V4 todavía no realizó operaciones virtuales.");
   }catch(v4Error){
     if($("compareV4"))$("compareV4").textContent="No disponible";
